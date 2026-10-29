@@ -1,7 +1,7 @@
 <script lang="ts">
   // Une fenêtre = une note. Elle affiche ce que la fenêtre principale lui envoie et lui renvoie chaque action.
-  import type { NotePatch } from '../lib/model';
-  import { keepOpenOnClose, onEvent, onSelfMoved, sendToMain } from '../lib/platform';
+  import { clampSize, type NotePatch } from '../lib/model';
+  import { keepOpenOnClose, NOTE_MARGIN, onEvent, onSelfMoved, onSelfResized, sendToMain, startResizeSelf } from '../lib/platform';
   import type { NoteMessage } from '../lib/pense.svelte';
   import type { NoteState } from '../lib/types';
   import Note from './Note.svelte';
@@ -25,6 +25,16 @@
     moveTimer = setTimeout(() => send({ type: 'update', id, patch: { x, y } }), 400);
   });
 
+  // La note suit sa fenêtre pendant qu'on la redimensionne ; la taille est enregistrée une fois lâchée.
+  let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+  onSelfResized((w, h) => {
+    if (!current) return;
+    current.note.w = w = clampSize(w);
+    current.note.h = h = clampSize(h);
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => send({ type: 'update', id, patch: { w, h } }), 400);
+  });
+
   // svelte-ignore state_referenced_locally
   send({ type: 'ready', id });
 
@@ -35,12 +45,13 @@
 </script>
 
 {#if current}
-  <div class="spot">
+  <div class="spot" style:padding="{NOTE_MARGIN.top}px {NOTE_MARGIN.side}px 0">
     <Note
       note={current.note}
       ringing={current.ringing}
       {focusRequest}
       draggable
+      onresizestart={startResizeSelf}
       onupdate={update}
       ondelete={() => send({ type: 'delete', id })}
       onseen={() => send({ type: 'seen', id })}
@@ -48,10 +59,3 @@
     />
   </div>
 {/if}
-
-<style>
-  /* Marge autour de la note dans sa fenêtre transparente : scotch en haut, ombre en bas. */
-  .spot {
-    padding: 14px 16px 0;
-  }
-</style>

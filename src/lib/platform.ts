@@ -3,14 +3,24 @@
 import { invoke } from '@tauri-apps/api/core';
 import { emitTo } from '@tauri-apps/api/event';
 import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { NOTE_SIZE } from './model';
 import { availableMonitors, cursorPosition, getCurrentWindow, PhysicalPosition, primaryMonitor, type Monitor } from '@tauri-apps/api/window';
 
 export const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 const STORAGE_KEY = 'pense';
 
-/** Taille de la fenêtre d'une note : la note (240 px) plus une marge pour le scotch et l'ombre. */
-export const NOTE_WINDOW = { width: 272, height: 288 };
+/** Marge autour de la note dans sa fenêtre : le scotch en haut, l'ombre en bas, l'inclinaison sur les côtés. */
+export const NOTE_MARGIN = { top: 14, side: 16, bottom: 34 };
+
+/** Taille de la fenêtre pour une note de w × h pixels CSS. */
+export const noteWindowSize = (w: number, h: number) => ({
+  width: w + 2 * NOTE_MARGIN.side,
+  height: h + NOTE_MARGIN.top + NOTE_MARGIN.bottom
+});
+
+/** Fenêtre d'une nouvelle note. */
+export const NOTE_WINDOW = noteWindowSize(NOTE_SIZE.default, NOTE_SIZE.default);
 
 export async function loadRaw(): Promise<string | null> {
   if (isTauri) return invoke<string | null>('load_data');
@@ -107,14 +117,25 @@ async function noteWindow(id: string): Promise<WebviewWindow | null> {
  * Crée la fenêtre d'une note, cachée : elle s'affiche quand la note a fini de charger
  * (voir showNote), pour éviter un carré blanc le temps du chargement.
  */
-export async function createNoteWindow(id: string, x: number, y: number, alwaysOnTop: boolean): Promise<void> {
+export async function createNoteWindow(
+  id: string,
+  x: number,
+  y: number,
+  size: { w: number; h: number },
+  alwaysOnTop: boolean
+): Promise<void> {
   if (!isTauri || (await noteWindow(id))) return;
+  const min = noteWindowSize(NOTE_SIZE.min, NOTE_SIZE.min);
+  const max = noteWindowSize(NOTE_SIZE.max, NOTE_SIZE.max);
   const w = new WebviewWindow(noteLabel(id), {
     url: `index.html?note=${encodeURIComponent(id)}`,
     title: 'Pense',
-    width: NOTE_WINDOW.width,
-    height: NOTE_WINDOW.height,
-    resizable: false,
+    ...noteWindowSize(size.w, size.h),
+    minWidth: min.width,
+    minHeight: min.height,
+    maxWidth: max.width,
+    maxHeight: max.height,
+    resizable: true,
     maximizable: false,
     minimizable: false,
     decorations: false,
@@ -173,6 +194,21 @@ export function onEvent<T>(event: string, handler: (payload: T) => void): void {
 export function onSelfMoved(handler: (x: number, y: number) => void): void {
   if (!isTauri) return;
   void getCurrentWindow().onMoved((e) => handler(e.payload.x, e.payload.y));
+}
+
+/** Taille de la note courante (pixels CSS, sans la marge), à chaque redimensionnement de sa fenêtre. */
+export function onSelfResized(handler: (w: number, h: number) => void): void {
+  if (!isTauri) return;
+  const win = getCurrentWindow();
+  void win.onResized(async (e) => {
+    const size = e.payload.toLogical(await win.scaleFactor());
+    handler(size.width - 2 * NOTE_MARGIN.side, size.height - NOTE_MARGIN.top - NOTE_MARGIN.bottom);
+  });
+}
+
+/** Le système prend la main pour agrandir la fenêtre courante par son coin bas-droit. */
+export async function startResizeSelf(): Promise<void> {
+  if (isTauri) await getCurrentWindow().startResizeDragging('SouthEast');
 }
 
 export function onSelfFocusChanged(handler: (focused: boolean) => void): void {

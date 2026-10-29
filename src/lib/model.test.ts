@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addNote, deleteNote, dueNotes, emptyData, normalize, restoreLast, TRASH_KEPT, updateNote } from './model';
+import { addNote, deleteNote, dueNotes, emptyData, normalize, NOTE_SIZE, restoreLast, TRASH_KEPT, updateNote } from './model';
 import { atTime, formatReminder, inMinutes, tomorrowAt } from './reminder';
 
 const at = (s: string) => new Date(s).getTime();
@@ -72,6 +72,18 @@ describe('notes', () => {
     updateNote(data, note.id, { pinned: true }, 2000);
     expect(data.notes[0]).toMatchObject({ pinned: true, updatedAt: 1000 });
     expect(normalize({ notes: [{ id: 'a' }] }).notes[0].pinned).toBe(false);
+  });
+
+  it('garde la taille de chaque note, dans les bornes', () => {
+    const data = emptyData();
+    const note = addNote(data, 1000);
+    expect(note).toMatchObject({ w: NOTE_SIZE.default, h: NOTE_SIZE.default });
+    updateNote(data, note.id, { w: 320, h: 410 }, 2000);
+    expect(data.notes[0]).toMatchObject({ w: 320, h: 410, updatedAt: 1000 });
+    const [old, tiny, huge] = normalize({ notes: [{ id: 'a' }, { id: 'b', w: 20, h: 'x' }, { id: 'c', w: 5000, h: 300.4 }] }).notes;
+    expect(old).toMatchObject({ w: NOTE_SIZE.default, h: NOTE_SIZE.default });
+    expect(tiny).toMatchObject({ w: NOTE_SIZE.min, h: NOTE_SIZE.default });
+    expect(huge).toMatchObject({ w: NOTE_SIZE.max, h: 300 });
   });
 
   it('relit un fichier abîmé sans planter', () => {

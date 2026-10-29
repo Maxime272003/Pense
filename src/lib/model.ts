@@ -6,6 +6,11 @@ export const DEFAULT_SETTINGS: Settings = {
   toggleShortcut: 'Ctrl+Alt+P'
 };
 
+/** Taille d'une note en pixels CSS : par défaut, et les bornes quand on l'agrandit ou la réduit. */
+export const NOTE_SIZE = { default: 240, min: 200, max: 640 };
+
+export const clampSize = (v: number) => Math.round(Math.min(Math.max(v, NOTE_SIZE.min), NOTE_SIZE.max));
+
 /** Nombre de notes supprimées qu'on peut encore rouvrir. */
 export const TRASH_KEPT = 10;
 
@@ -24,6 +29,8 @@ function normalizeNote(raw: any, now: number, pinnedByDefault = false): Note | n
     color: isColor(raw.color) ? raw.color : 'jaune',
     x: num(raw.x),
     y: num(raw.y),
+    w: clampSize(num(raw.w) ?? NOTE_SIZE.default),
+    h: clampSize(num(raw.h) ?? NOTE_SIZE.default),
     rot: num(raw.rot) ?? 0,
     remindAt: num(raw.remindAt),
     pinned: typeof raw.pinned === 'boolean' ? raw.pinned : pinnedByDefault,
@@ -71,6 +78,8 @@ export function addNote(data: Data, now = Date.now(), random = Math.random): Not
     color: data.lastColor,
     x: null,
     y: null,
+    w: NOTE_SIZE.default,
+    h: NOTE_SIZE.default,
     rot: Math.round((random() * 4 - 2) * 2) / 2,
     remindAt: null,
     pinned: false,
@@ -81,13 +90,13 @@ export function addNote(data: Data, now = Date.now(), random = Math.random): Not
   return note;
 }
 
-export type NotePatch = Partial<Pick<Note, 'text' | 'color' | 'x' | 'y' | 'remindAt' | 'pinned'>>;
+export type NotePatch = Partial<Pick<Note, 'text' | 'color' | 'x' | 'y' | 'w' | 'h' | 'remindAt' | 'pinned'>>;
 
 export function updateNote(data: Data, id: string, patch: NotePatch, now = Date.now()): Note | null {
   const note = data.notes.find((n) => n.id === id);
   if (!note) return null;
   Object.assign(note, patch);
-  // Déplacer une note ne compte pas comme une modification.
+  // Déplacer, redimensionner ou épingler une note ne compte pas comme une modification.
   if ('text' in patch || 'color' in patch || 'remindAt' in patch) note.updatedAt = now;
   if (patch.color) data.lastColor = patch.color;
   return note;

@@ -140,7 +140,7 @@ class Pense {
       updateNote(this.data, note.id, spot);
       this.save();
     }
-    await createNoteWindow(note.id, note.x!, note.y!, note.pinned);
+    await createNoteWindow(note.id, note.x!, note.y!, note, note.pinned);
   }
 
   private async onNoteMessage(m: NoteMessage): Promise<void> {
@@ -158,7 +158,7 @@ class Pense {
         if ('remindAt' in m.patch) this.stopRinging(m.id);
         if ('pinned' in m.patch) await setNoteOnTop(m.id, note.pinned || this.ringing.has(m.id));
         this.save();
-        // Le texte et la position viennent de la note elle-même : inutile de les lui renvoyer.
+        // Le texte, la position et la taille viennent de la note elle-même : inutile de les lui renvoyer.
         if ('color' in m.patch || 'remindAt' in m.patch || 'pinned' in m.patch) this.push(m.id);
         break;
       }

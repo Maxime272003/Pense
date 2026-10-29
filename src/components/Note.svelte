@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import type { NotePatch } from '../lib/model';
-  import { textSize } from '../lib/model';
+  import { clampSize, textSize } from '../lib/model';
   import { atTime, formatReminder, inMinutes, nextFullHour, tomorrowAt } from '../lib/reminder';
   import { COLOR_IDS, COLORS, type Note } from '../lib/types';
   import Icon from './Icon.svelte';
@@ -11,6 +11,7 @@
     ringing = false,
     focusRequest = 0,
     draggable = false,
+    onresizestart,
     onupdate,
     ondelete,
     onseen,
@@ -22,6 +23,8 @@
     focusRequest?: number;
     /** Dans Tauri : on déplace la fenêtre en tirant le haut de la note. */
     draggable?: boolean;
+    /** Dans Tauri : le système redimensionne la fenêtre ; sinon la note se redimensionne dans la page. */
+    onresizestart?: () => void;
     onupdate: (patch: NotePatch) => void;
     ondelete: () => void;
     onseen: () => void;
@@ -103,6 +106,18 @@
     panel = null;
   }
 
+  function startResize(e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    if (onresizestart) return onresizestart();
+    const grip = e.currentTarget as HTMLElement;
+    const from = { x: e.clientX, y: e.clientY, w: note.w, h: note.h };
+    grip.setPointerCapture(e.pointerId);
+    const move = (m: PointerEvent) => onupdate({ w: clampSize(from.w + m.clientX - from.x), h: clampSize(from.h + m.clientY - from.y) });
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('lostpointercapture', () => grip.removeEventListener('pointermove', move), { once: true });
+  }
+
   function onKey(e: KeyboardEvent) {
     if (e.key !== 'Escape') return;
     if (panel) panel = null;
@@ -118,6 +133,8 @@
   class="note"
   class:ringing
   class:straight={editing || panel !== null}
+  style:width="{note.w}px"
+  style:height="{note.h}px"
   style:--paper={color.bg}
   style:--edge={color.edge}
   style:--rot="{note.rot}deg"
@@ -219,13 +236,14 @@
       </form>
     </div>
   {/if}
+
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="resize" title="Redimensionner" onpointerdown={startResize}></div>
 </article>
 
 <style>
   .note {
     position: relative;
-    width: 240px;
-    height: 240px;
     background: var(--paper);
     color: var(--ink);
     border-radius: 6px;
@@ -309,6 +327,29 @@
   }
   .tool.pin.on :global(svg) {
     transform: rotate(-30deg);
+  }
+  /* Coin bas-droit : on tire pour agrandir ou réduire la note. */
+  .resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 22px;
+    height: 22px;
+    cursor: nwse-resize;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    background: linear-gradient(
+      135deg,
+      transparent 52%,
+      rgba(29, 24, 48, 0.28) 52% 60%,
+      transparent 60% 70%,
+      rgba(29, 24, 48, 0.28) 70% 78%,
+      transparent 78%
+    );
+    border-bottom-right-radius: 6px;
+  }
+  .note:hover .resize {
+    opacity: 1;
   }
   .text {
     flex: 1;

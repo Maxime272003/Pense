@@ -18,6 +18,9 @@ export interface Note {
   /** Position de la fenêtre en pixels physiques ; null tant que la note n'a jamais été placée. */
   x: number | null;
   y: number | null;
+  /** Taille de la note en pixels CSS (hors scotch et ombre). */
+  w: number;
+  h: number;
   /** Légère inclinaison en degrés, tirée à la création. */
   rot: number;
   /** Heure du rappel (ms depuis 1970), null sans rappel. */
