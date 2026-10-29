@@ -85,13 +85,6 @@
         </div>
         <Switch checked={s.launchAtStartup} labelledby="l-boot" onchange={(v) => toggle({ launchAtStartup: v })} />
       </div>
-      <div class="row">
-        <div class="txt">
-          <span id="l-top" class="name">Notes toujours au premier plan</span>
-          <span class="muted desc">Sinon elles restent sur le bureau, derrière tes fenêtres.</span>
-        </div>
-        <Switch checked={s.alwaysOnTop} labelledby="l-top" onchange={(v) => toggle({ alwaysOnTop: v })} />
-      </div>
     </section>
 
     <section aria-labelledby="s-keys">

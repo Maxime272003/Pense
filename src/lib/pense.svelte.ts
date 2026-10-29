@@ -140,7 +140,7 @@ class Pense {
       updateNote(this.data, note.id, spot);
       this.save();
     }
-    await createNoteWindow(note.id, note.x!, note.y!, this.settings.alwaysOnTop);
+    await createNoteWindow(note.id, note.x!, note.y!, note.pinned);
   }
 
   private async onNoteMessage(m: NoteMessage): Promise<void> {
@@ -156,9 +156,10 @@ class Pense {
       case 'update': {
         updateNote(this.data, m.id, m.patch);
         if ('remindAt' in m.patch) this.stopRinging(m.id);
+        if ('pinned' in m.patch) await setNoteOnTop(m.id, note.pinned || this.ringing.has(m.id));
         this.save();
         // Le texte et la position viennent de la note elle-même : inutile de les lui renvoyer.
-        if ('color' in m.patch || 'remindAt' in m.patch) this.push(m.id);
+        if ('color' in m.patch || 'remindAt' in m.patch || 'pinned' in m.patch) this.push(m.id);
         break;
       }
       case 'delete':
@@ -236,9 +237,6 @@ class Pense {
     Object.assign(this.data.settings, patch);
     this.save();
     if ('launchAtStartup' in patch) await syncAutostart(this.settings.launchAtStartup).catch(() => {});
-    if ('alwaysOnTop' in patch) {
-      for (const n of this.data.notes) await setNoteOnTop(n.id, this.settings.alwaysOnTop || this.ringing.has(n.id));
-    }
     if ('newShortcut' in patch || 'toggleShortcut' in patch) await this.applyShortcuts();
   }
 
@@ -289,7 +287,7 @@ class Pense {
 
   private stopRinging(id: string): void {
     if (!this.ringing.delete(id)) return;
-    void setNoteOnTop(id, this.settings.alwaysOnTop);
+    void setNoteOnTop(id, this.note(id)?.pinned ?? false);
     if (this.hidden) void hideNote(id);
   }
 

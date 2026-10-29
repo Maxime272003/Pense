@@ -22,6 +22,8 @@ export interface Note {
   rot: number;
   /** Heure du rappel (ms depuis 1970), null sans rappel. */
   remindAt: number | null;
+  /** Épinglée : la note reste au-dessus des autres fenêtres. */
+  pinned: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -32,7 +34,6 @@ export interface TrashedNote extends Note {
 
 export interface Settings {
   launchAtStartup: boolean;
-  alwaysOnTop: boolean;
   newShortcut: string;
   toggleShortcut: string;
 }

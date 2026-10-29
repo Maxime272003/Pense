@@ -65,6 +65,15 @@ describe('notes', () => {
     expect(dueNotes(data, 200).map((n) => n.id)).toEqual([a.id]);
   });
 
+  it('crée les notes désépinglées, et l’épingle ne compte pas comme une modification', () => {
+    const data = emptyData();
+    const note = addNote(data, 1000);
+    expect(note.pinned).toBe(false);
+    updateNote(data, note.id, { pinned: true }, 2000);
+    expect(data.notes[0]).toMatchObject({ pinned: true, updatedAt: 1000 });
+    expect(normalize({ notes: [{ id: 'a' }] }).notes[0].pinned).toBe(false);
+  });
+
   it('relit un fichier abîmé sans planter', () => {
     const data = normalize({
       notes: [{ id: 'a', text: 'ok', color: 'fuchsia', x: 'nope' }, { text: 'sans id' }, null],
@@ -72,9 +81,9 @@ describe('notes', () => {
       settings: { alwaysOnTop: true, newShortcut: '' }
     });
     expect(data.notes).toHaveLength(1);
-    expect(data.notes[0]).toMatchObject({ id: 'a', color: 'jaune', x: null, remindAt: null });
+    expect(data.notes[0]).toMatchObject({ id: 'a', color: 'jaune', x: null, remindAt: null, pinned: true });
     expect(data.lastColor).toBe('rose');
-    expect(data.settings).toMatchObject({ alwaysOnTop: true, newShortcut: 'Ctrl+Alt+N', toggleShortcut: 'Ctrl+Alt+P' });
+    expect(data.settings).toEqual({ launchAtStartup: false, newShortcut: 'Ctrl+Alt+N', toggleShortcut: 'Ctrl+Alt+P' });
     expect(normalize('n’importe quoi').notes).toEqual([]);
   });
 });

@@ -128,6 +128,16 @@
   <div class="grip" aria-hidden="true" data-tauri-drag-region={draggable || undefined}></div>
 
   <div class="tools" class:shown={editing || panel !== null}>
+    <button
+      class="tool pin"
+      class:on={note.pinned}
+      aria-label={note.pinned ? 'Désépingler la note' : 'Épingler au premier plan'}
+      aria-pressed={note.pinned}
+      title={note.pinned ? 'Désépingler' : 'Épingler au premier plan'}
+      onclick={() => onupdate({ pinned: !note.pinned })}
+    >
+      <Icon name="pin" />
+    </button>
     <button class="tool" class:on={panel === 'color'} aria-label="Couleur" aria-expanded={panel === 'color'} onclick={() => togglePanel('color')}>
       <Icon name="palette" />
     </button>
@@ -257,15 +267,10 @@
     right: 6px;
     display: flex;
     gap: 2px;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-  .note:hover .tools,
-  .tools.shown,
-  .tools:focus-within {
-    opacity: 1;
   }
   .tool {
+    opacity: 0;
+    transition: opacity 0.15s ease;
     width: 28px;
     height: 28px;
     border: 0;
@@ -279,6 +284,22 @@
   .tool:hover,
   .tool.on {
     background: rgba(29, 24, 48, 0.12);
+  }
+  .note:hover .tool,
+  .tools.shown .tool,
+  .tools:focus-within .tool,
+  .tool.pin.on {
+    opacity: 1;
+  }
+  /* Une note épinglée garde son épingle visible, même sans survol. */
+  .tool.pin.on {
+    background: transparent;
+  }
+  .note:hover .tool.pin.on {
+    background: rgba(29, 24, 48, 0.12);
+  }
+  .tool.pin.on :global(svg) {
+    transform: rotate(-30deg);
   }
   .text {
     flex: 1;

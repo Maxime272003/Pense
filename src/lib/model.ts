@@ -2,7 +2,6 @@ import { COLOR_IDS, type ColorId, type Data, type Note, type Settings } from './
 
 export const DEFAULT_SETTINGS: Settings = {
   launchAtStartup: false,
-  alwaysOnTop: false,
   newShortcut: 'Ctrl+Alt+N',
   toggleShortcut: 'Ctrl+Alt+P'
 };
@@ -17,7 +16,7 @@ export function emptyData(): Data {
 const isColor = (c: unknown): c is ColorId => COLOR_IDS.includes(c as ColorId);
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
-function normalizeNote(raw: any, now: number): Note | null {
+function normalizeNote(raw: any, now: number, pinnedByDefault = false): Note | null {
   if (!raw || typeof raw.id !== 'string') return null;
   return {
     id: raw.id,
@@ -27,6 +26,7 @@ function normalizeNote(raw: any, now: number): Note | null {
     y: num(raw.y),
     rot: num(raw.rot) ?? 0,
     remindAt: num(raw.remindAt),
+    pinned: typeof raw.pinned === 'boolean' ? raw.pinned : pinnedByDefault,
     createdAt: num(raw.createdAt) ?? now,
     updatedAt: num(raw.updatedAt) ?? now
   };
@@ -37,7 +37,9 @@ export function normalize(raw: unknown, now = Date.now()): Data {
   const data = emptyData();
   if (!raw || typeof raw !== 'object') return data;
   const r = raw as any;
-  if (Array.isArray(r.notes)) data.notes = r.notes.map((n: any) => normalizeNote(n, now)).filter(Boolean) as Note[];
+  // L'ancien réglage « toujours au premier plan » devient une épingle sur chaque note.
+  const pinnedByDefault = r.settings?.alwaysOnTop === true;
+  if (Array.isArray(r.notes)) data.notes = r.notes.map((n: any) => normalizeNote(n, now, pinnedByDefault)).filter(Boolean) as Note[];
   if (Array.isArray(r.trash)) {
     data.trash = r.trash
       .map((n: any) => {
@@ -51,7 +53,6 @@ export function normalize(raw: unknown, now = Date.now()): Data {
   if (r.settings && typeof r.settings === 'object') {
     const s = r.settings;
     if (typeof s.launchAtStartup === 'boolean') data.settings.launchAtStartup = s.launchAtStartup;
-    if (typeof s.alwaysOnTop === 'boolean') data.settings.alwaysOnTop = s.alwaysOnTop;
     if (typeof s.newShortcut === 'string' && s.newShortcut) data.settings.newShortcut = s.newShortcut;
     if (typeof s.toggleShortcut === 'string' && s.toggleShortcut) data.settings.toggleShortcut = s.toggleShortcut;
   }
@@ -72,6 +73,7 @@ export function addNote(data: Data, now = Date.now(), random = Math.random): Not
     y: null,
     rot: Math.round((random() * 4 - 2) * 2) / 2,
     remindAt: null,
+    pinned: false,
     createdAt: now,
     updatedAt: now
   };
@@ -79,7 +81,7 @@ export function addNote(data: Data, now = Date.now(), random = Math.random): Not
   return note;
 }
 
-export type NotePatch = Partial<Pick<Note, 'text' | 'color' | 'x' | 'y' | 'remindAt'>>;
+export type NotePatch = Partial<Pick<Note, 'text' | 'color' | 'x' | 'y' | 'remindAt' | 'pinned'>>;
 
 export function updateNote(data: Data, id: string, patch: NotePatch, now = Date.now()): Note | null {
   const note = data.notes.find((n) => n.id === id);
