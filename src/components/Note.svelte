@@ -127,17 +127,19 @@
   <span class="tape" aria-hidden="true" data-tauri-drag-region={draggable || undefined}></span>
   <div class="grip" aria-hidden="true" data-tauri-drag-region={draggable || undefined}></div>
 
+  <button
+    class="tool pin"
+    class:shown={editing || panel !== null}
+    class:on={note.pinned}
+    aria-label={note.pinned ? 'Désépingler la note' : 'Épingler au premier plan'}
+    aria-pressed={note.pinned}
+    title={note.pinned ? 'Désépingler' : 'Épingler au premier plan'}
+    onclick={() => onupdate({ pinned: !note.pinned })}
+  >
+    <Icon name="pin" />
+  </button>
+
   <div class="tools" class:shown={editing || panel !== null}>
-    <button
-      class="tool pin"
-      class:on={note.pinned}
-      aria-label={note.pinned ? 'Désépingler la note' : 'Épingler au premier plan'}
-      aria-pressed={note.pinned}
-      title={note.pinned ? 'Désépingler' : 'Épingler au premier plan'}
-      onclick={() => onupdate({ pinned: !note.pinned })}
-    >
-      <Icon name="pin" />
-    </button>
     <button class="tool" class:on={panel === 'color'} aria-label="Couleur" aria-expanded={panel === 'color'} onclick={() => togglePanel('color')}>
       <Icon name="palette" />
     </button>
@@ -285,9 +287,16 @@
   .tool.on {
     background: rgba(29, 24, 48, 0.12);
   }
+  .pin {
+    position: absolute;
+    top: 3px;
+    left: 6px;
+  }
   .note:hover .tool,
   .tools.shown .tool,
   .tools:focus-within .tool,
+  .tool.pin.shown,
+  .tool.pin:focus-visible,
   .tool.pin.on {
     opacity: 1;
   }
